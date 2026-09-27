@@ -22,34 +22,37 @@ function UploadForm() {
   // TODO 1: Crie um estado para guardar o ARQUIVO selecionado pelo usuário.
   // Valor inicial: null (nenhum arquivo selecionado ainda)
   // Dica: useState retorna [valor, funçãoParaAtualizar]
+  const [selectedArchive, setSelectedArchive] = useState(null);
 
-
-  // TODO 2: Crie um estado para guardar a URL/imagem RESULTADO
+  // TODO 2: Crie um estado para guardar a imagem RESULTADO
   // (a imagem que volta do backend, sem fundo).
   // Valor inicial: null
-
+  const [withoutBG, setWithoutBG] = useState(null);
 
   // TODO 3: Crie um estado booleano para indicar se a requisição
   // está "carregando" (loading). Valor inicial: false
-
+  const [resultLoading, setResultLoading] = useState(false);
 
   // TODO 4: Crie um estado para guardar uma mensagem de ERRO, caso algo dê errado.
   // Valor inicial: null
-
+  const [returnedError, setReturnedError] = useState(null);
 
   /*
     TODO 5: Função handleFileChange(event)
-
     Quando o usuário escolhe um arquivo no <input type="file">,
     o React dispara um evento. Você precisa:
-
     a) Pegar o arquivo escolhido (event.target.files[0])
     b) Salvar esse arquivo no estado criado no TODO 1
     c) Limpar qualquer resultado anterior (estado do TODO 2) e
        qualquer erro anterior (estado do TODO 4) — porque o usuário
        está começando um novo upload
   */
+  function handleFileChange(event) {
+    setSelectedArchive(event.target.files[0]);
 
+    setWithoutBG(null);
+    setReturnedError(null);
+  }
 
   /*
     TODO 6: Função handleUpload() — async
@@ -86,7 +89,36 @@ function UploadForm() {
 
     h) No final (bloco finally), desativar o loading (TODO 3 = false)
   */
+  async function handleUpload() {
+    if (!selectedArchive) {
+      setReturnedError("Selecione uma imagem antes de continuar.")
+      return;
+    }
+    setResultLoading(true);
 
+    try {
+      const formData = new FormData()
+      formData.append("file", selectedArchive);
+
+      const response = await axios.post(
+        "http://localhost:8000/items/remove-background",
+        formData,
+        { responseType: "blob" }
+      );
+
+      const imageUrl = URL.createObjectURL(response.data); // ← transforma blob em URL
+      setWithoutBG(imageUrl);
+
+    } catch (error) {
+      setReturnedError("Não foi possível processar a imagem.");
+
+
+    } finally {
+      setResultLoading(false);
+
+    }
+
+  }
 
   return (
     <div className="flex flex-col items-center gap-4 p-6">
@@ -97,8 +129,10 @@ function UploadForm() {
         - type="file"
         - accept="image/*"  (só permite imagens no seletor)
         - onChange={...}    (chama a função do TODO 5)
-      */}
+      */
+      }
 
+      <input type="file" accept="image/*" onChange={handleFileChange} />
 
       {/*
         TODO 8: Botão "Remover fundo"
@@ -107,19 +141,27 @@ function UploadForm() {
         - texto do botão muda conforme o estado de loading
           (ex: "Processando..." vs "Remover fundo")
         - pode ficar desabilitado (disabled) enquanto loading=true
-      */}
+      */
+      }
+      <button onClick={handleUpload} disabled={resultLoading}>
+        {resultLoading ? "Processando..." : "Remover fundo"}
+      </button>
 
 
       {/*
         TODO 9: Exibir mensagem de erro, SE existir
         (renderização condicional — algo como: {erro && <p>...</p>})
-      */}
+      */
+      }
+      {returnedError && <p>{returnedError}</p>}
 
 
       {/*
         TODO 10: Exibir a imagem resultado, SE existir
         <img src={resultado} alt="Peça sem fundo" />
-      */}
+      */
+      }
+      {withoutBG && <img src={withoutBG} alt="Peça sem fundo" />}
 
     </div>
   );
